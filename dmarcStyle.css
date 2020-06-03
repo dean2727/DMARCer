@@ -1,0 +1,118 @@
+﻿
+body {
+    background-color: rgb(80,80,80);
+}
+
+.functionality {
+    position: relative;
+    top: 15%;
+    width: 100%;
+    height: 800px;
+    border: 8px solid black;
+    border-radius: 20px;
+}
+
+.button {
+    margin: 0 auto;
+    border: 12px solid RGB(149, 82, 81);
+    border-radius: 18px;
+    text-align: center;
+    background-color: white;
+    color: black;
+    transition-duration: .4s;
+    padding: 50px 30px;
+    font-size: 20px;
+}
+.button:hover {
+    background-color: RGB(149, 82, 81);
+    color: white;
+    border-color: rgb(116, 63, 62);
+}
+
+.bigDiv {
+    position: absolute;
+    width: 100%;
+    height: 80px;
+    bottom: 10%;
+}
+
+.outdiv {
+    position: absolute;
+    width: 100%;
+    top: 10%;
+}
+
+.halfDiv {
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgb(104,104,104);
+}
+.left {
+    float: left;
+}
+.right {
+    float: right;
+}
+
+.out {
+    height: 500px;
+}
+
+
+#literal1 {
+    background-color: white;
+    border: 5px solid RGB(149, 82, 81);
+    border-radius: 20px;
+    width: 650px;
+    height: 340px;
+    top: 80px;
+    bottom: 80px;
+    overflow: auto;
+    margin-left: 5px;
+}
+
+#literal2 {
+    background-color: white;
+    border: 5px solid RGB(149, 82, 81);
+    border-radius: 20px;
+    width: 650px;
+    height: 340px;
+    top: 80px;
+    bottom: 80px;
+    overflow: auto;
+    margin-left: 5px;
+}
+
+
+p, h3, h5, h6 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+p {
+    font-size: 18px;
+}
+
+
+@keyframes numFoundAnimation {
+    from {
+        text-shadow: 1px 1px 2px black, 0 0 20px #0099FF, 0 0 10px #0099FF;
+        transform: rotate(-3deg);
+    }
+    to {
+        text-shadow: 1px 1px 2px black, 0 0 20px #0066FF, 0 0 10px #0066FF;
+        transform: rotate(3deg);
+    }
+}
+
+#numFound {
+    text-align: center;
+    color: white;
+    animation-name: numFoundAnimation;
+    animation-duration: 1s;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+    /*transition-timing-function: ease;*/
+}
