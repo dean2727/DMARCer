@@ -7,6 +7,9 @@ using System.Web.UI.WebControls;
 using System.Xml.Serialization;
 using System.IO;
 using System.Net;
+using System.Drawing;
+using System.IO.Compression;
+using System.EnterpriseServices;
 
 namespace Dean
 {
@@ -204,29 +207,35 @@ namespace Dean
         // In right side Panel (literal2), display all fraudulent IP addresses in all the XML files in the directory
         protected void listIPs_Click(object sender, EventArgs e)
         {
-            const string dirName = "xmlFiles";
-            DirectoryInfo xmlDir = new DirectoryInfo($"C:\\Users\\Dean Orenstein\\source\\repos\\Dean\\{dirName}");
+            const string directory = "xmlFiles";
+            string path = $"C:\\Users\\Dean Orenstein\\Documents\\dean-orenstein\\{directory}";
+            
+            DirectoryInfo xmlDir = new DirectoryInfo(path);
             FileInfo[] files = xmlDir.GetFiles("*.*");
-            // Using a list of key:value pairs since theres a good chance that duplicate keys will emerge (not allowed in Dictionary)
-            List <KeyValuePair<string, string>> badIPsAndReasons = new List<KeyValuePair<string, string>>();
+            Dictionary <string, string> badIPsAndReasons = new Dictionary<string, string>();  // Holds "fraud IP:reason for it being there" pairs
+            Dictionary<string, int> reportAndNumIPs = new Dictionary<string, int>();  // Holds "XML file:the number of unique fraud IPs it has" pairs
 
             // For each file, first deserialize the XML to ReportFeedback object
-            int i = 1;
-            System.Diagnostics.Debug.WriteLine("Fraudulent IP addresses that are sending invalid emails from the agencysystems domain:");
+            int i = 1;            
             foreach (FileInfo file in files)
             {
                 XmlSerializer serializer = new XmlSerializer(typeof(ReportFeedback), new XmlRootAttribute("feedback"));
-                string filePath = Server.MapPath($"/{dirName}/{file.ToString()}");
+                string filePath = Server.MapPath($"/{directory}/{file}");
                 ReportFeedback currReport;
                 Stream xmlReader = new FileStream(filePath, FileMode.Open);
                 currReport = (ReportFeedback)serializer.Deserialize(xmlReader);
 
                 // For each record in this file, get the bad IPs (<source_ip>)
+                int numIPs = 0;
                 foreach (Record record in currReport.records)
                 {
                     string badIP = record.row.sourceIp;
+                    // Ignore this IP if the dictionary already has it
+                    if (badIPsAndReasons.ContainsKey(badIP))
+                        continue;
+                    numIPs++;
                     // See the reason for why the IP is fraud
-                    string reason = "";
+                    string reason;
                     if (record.row.policyEvaluated.dkim == "fail")
                     {
                         if (record.row.policyEvaluated.spf == "fail")
@@ -239,41 +248,50 @@ namespace Dean
                     else  // Both checks pass -> IP's identified (count) > 1
                         reason = "Multiple IP's identified (count > 1)";
                     // Add ip:reason pair to our dictionary
-                    badIPsAndReasons.Add(new KeyValuePair<string, string>(badIP, reason));
+                    badIPsAndReasons.Add(badIP, reason);                    
                 }
 
+                // Add file:num IPs pair to other dictionary
+                reportAndNumIPs.Add(file.ToString(), numIPs);
                 xmlReader.Close();
                 i++;
             }
 
-            // Add html <p> elements to the right hand side literal (IP / DNS name / Reason)
+            // Add html elements to the right hand side literal (ID / IP / DNS name / Reason)
             output2.Text = $"<h2 id=\"numFound\">Found {badIPsAndReasons.Count} fraudulent IP addresses!</h2>";
             output2.Text += "<h3><u>IP ID / IP address / IP's DNS host name / Reason IP is fraudulent</u>:</h3>";
             output2.Text += "<h6>(DKIM stands for DomainKeys Identified Mail Protocol, SPF stands for Sender Policy Framework)<h6><br>";
-            int id = 1;
-            foreach (KeyValuePair<string, string> pair in badIPsAndReasons)
+
+            // Loop through the reports, adding HTML indicatig the report, and looping n times for each (n = number of fraud IPs in that report)
+            int id = 0;
+            foreach (string report in reportAndNumIPs.Keys)
             {
-                string ipStr = pair.Key;
-                string reason = pair.Value;
+                output2.Text += "<p><b>" + report + "</b>:</p><br>";
+                for (int ip = 0; ip < reportAndNumIPs[report]; ip++)
+                {
+                    string theIP = badIPsAndReasons.ElementAt(ip + id).Key;
+                    string reason = badIPsAndReasons[theIP];
 
-                output2.Text += $"<p>{id} / {ipStr} / ";
-                try
-                {
-                    IPAddress ip = IPAddress.Parse(ipStr);
-                    IPHostEntry DNSname = Dns.GetHostEntry(ip);
-                    output2.Text += $"{DNSname.HostName} / ";
-                }
-                catch (System.Net.Sockets.SocketException)
-                {
-                    output2.Text += "Could not resolve this address. / ";
-                }
+                    // Add more HTML for ID / IP / DNS name / Reason for this IP
+                    output2.Text += $"<p>{ip + id} / {theIP} / ";
+                    try
+                    {
+                        IPAddress formattedIP = IPAddress.Parse(theIP);
+                        IPHostEntry DNSname = Dns.GetHostEntry(formattedIP);
+                        output2.Text += $"{DNSname.HostName} / ";
+                    }
+                    catch (System.Net.Sockets.SocketException)
+                    {
+                        output2.Text += "Could not resolve this address. / ";
+                    }
 
-                // No matter what happens, the reason for fraud is displayed and id is incremented
-                finally
-                {
-                    output2.Text += $"{reason}</p><br>";
-                    id++;
+                    // No matter what happens, the reason for fraud is displayed and id is incremented
+                    finally
+                    {
+                        output2.Text += $"{reason}</p><br>";
+                    }
                 }
+                id += reportAndNumIPs[report];
             }
 
             literal2.Visible = true;
